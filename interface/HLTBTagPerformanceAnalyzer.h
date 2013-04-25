@@ -89,7 +89,7 @@ class HLTBTagPerformanceAnalyzer : public edm::EDAnalyzer {
       
       double minJetPT_;
       unsigned int hltPathIndex_;
-      bool isData_;
+//      bool isData_;
       std::string btagAlgo_;
 
       DQMStore * dqm;
