@@ -1,0 +1,30 @@
+<cuy>
+ <validation type="REFREL_SAMPLE_Val" file="DQM_V0001_R000000001__CMSSW_3_1_0__RelVal__TrigVal.root" release="REFREL_SAMPLE_Val">
+ <TH1 name="REFREL_JetTag_L3" source="/DQMData/Run 1/HLT/Run summary/BTag/HLT_DiJet40Eta2p6_BTagIP3DFastPV/JetTag_L3"/>
+ <TH1 name="REFREL_JetTag_Offline" source="/DQMData/Run 1/HLT/Run summary/BTag/HLT_DiJet40Eta2p6_BTagIP3DFastPV/JetTag_Offline"/>
+
+<!--
+
+
+JetTag_L3
+JetTag_Offline
+JetTag_OffvsL3
+Vertex_HLT_x
+Vertex_HLT_y
+Vertex_HLT_z
+Vertex_Off_x
+Vertex_Off_y
+Vertex_Off_z
+Vertex_OffvsHLT_x
+Vertex_OffvsHLT_y
+Vertex_OffvsHLT_z
+
+-->
+</validation>
+
+
+ <superimpose name="SAMPLE_Val" title="JetTag" SetLogy="false" SetGrid="true" XTitle="Discriminator" YTitle="Nevents   ">
+<superimposeItem name="REFREL_JetTag_L3" color="1" MarkerStyle="22" legend="JetTag_L3"/>
+<superimposeItem name="REFREL_JetTag_Offline" color="2" MarkerStyle="22" legend="JetTag_Offline"/>
+ </superimpose>
+</cuy>

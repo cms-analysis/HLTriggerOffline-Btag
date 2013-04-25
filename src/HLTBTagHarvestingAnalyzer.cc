@@ -1,4 +1,4 @@
-#include "HLTriggerOffline/BTag/interface/HLTBTagHarvestingAnalyzer.h"
+#include "HLTriggerOffline/Btag/interface/HLTBTagHarvestingAnalyzer.h"
 
 //
 // constructors and destructor

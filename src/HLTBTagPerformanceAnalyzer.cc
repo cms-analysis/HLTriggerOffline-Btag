@@ -1,4 +1,4 @@
-#include "HLTriggerOffline/BTag/interface/HLTBTagPerformanceAnalyzer.h"
+#include "HLTriggerOffline/Btag/interface/HLTBTagPerformanceAnalyzer.h"
 #include "DataFormats/Common/interface/View.h"
 #include "DQMServices/Core/interface/DQMStore.h"
 #include "FWCore/ServiceRegistry/interface/Service.h"
@@ -26,7 +26,7 @@ HLTBTagPerformanceAnalyzer::HLTBTagPerformanceAnalyzer(const edm::ParameterSet& 
    btagAlgo_                       = iConfig.getParameter<std::string> ("BTagAlgorithm");
 
    // various parameters
-   isData_                         = iConfig.getParameter<bool>   ("IsData");
+//   isData_                         = iConfig.getParameter<bool>   ("IsData");
    
    // DQMStore services   
    dqm = edm::Service<DQMStore>().operator->();
@@ -79,8 +79,9 @@ HLTBTagPerformanceAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSe
             // jet
             RefToBase<reco::Jet> jet  = l25IPTag.jet();
             H1_["JetTag_L25"] -> Fill(l25JetTag[jet]);
+			std::cout<<"# "<<j<<" "<<l25JetTag[jet]<<std::endl;
          }
-      }
+      } else std::cout<<"trobles with  l25IPTagInfoCollection"<<std::endl;
 
    
       // IPTagInfo L3
@@ -162,7 +163,8 @@ HLTBTagPerformanceAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSe
       const reco::Vertex & offVertex = (*(trackIPTagInfos.at(0).primaryVertex().product())).at(0);
       
    // Primary vertex histograms
-      H1_["Vertex_HLT_x"] -> Fill(hltVertex.x());
+//      H1_["Vertex_HLT_x"] -> Fill(hltVertex.x());
+      H1_["Vertex_HLT_x"] -> Fill(hltVertex.y());
       H1_["Vertex_HLT_y"] -> Fill(hltVertex.y());
       H1_["Vertex_HLT_z"] -> Fill(hltVertex.z());
       H1_["Vertex_Off_x"] -> Fill(offVertex.x());
@@ -219,13 +221,17 @@ HLTBTagPerformanceAnalyzer::beginJob()
 // ---------------------------------------------   
    // Vertex Histograms
    // Vertex position ranges for MC
-   float vtxXL = 0.237;
-   float vtxXU = 0.237;
-   float vtxYL = 0.386;
+   float vtxXL = 0.15;
+   float vtxXU = 0.35;
+    
+//   float vtxXL = 0.386;
+//   float vtxXU = 0.400;
+    float vtxYL = 0.386;
    float vtxYU = 0.400;
    float vtxZL = -20.0;
    float vtxZU =  20.0;
    
+/*
    if ( isData_ )
    {
       vtxXL = 0.062;
@@ -235,7 +241,7 @@ HLTBTagPerformanceAnalyzer::beginJob()
       vtxZL = -20.0;
       vtxZU =  20.0;
    }
-   
+  */ 
    
    H1_["Vertex_HLT_x"]      = dqm->book1D( "Vertex_HLT_x", "HLT vertex x position", 280, vtxXL, vtxXU );
    H1_["Vertex_HLT_y"]      = dqm->book1D( "Vertex_HLT_y", "HLT vertex y position", 280, vtxYL, vtxYU );

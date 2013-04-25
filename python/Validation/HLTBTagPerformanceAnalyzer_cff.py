@@ -10,6 +10,8 @@ bTagValidation     = cms.EDAnalyzer("HLTBTagPerformanceAnalyzer",
    TrackIPTagInfo  = cms.InputTag('impactParameterTagInfos'),
    OfflineJetTag   = cms.InputTag('trackCountingHighEffBJetTags'),
    MinJetPT        = cms.double(20),
-   IsData          = cms.bool(False),
+#   IsData          = cms.bool(False),
    BTagAlgorithm   = cms.string('TC'),
 )
+
+
