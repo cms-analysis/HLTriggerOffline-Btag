@@ -12,6 +12,12 @@
 <use name="DataFormats/L1GlobalTrigger"/>
 <use name="JetMETCorrections/Objects"/>
 <use name="RecoBTau/JetTagComputer"/>
+<use name="PhysicsTools/UtilAlgos"/>
+<use name="SimDataFormats/JetMatching"/>
+<use name="DataFormats/HLTReco"/>
+<use name="DataFormats/JetReco"/>
+<use name="PhysicsTools/ JetMCAlgos"/>
+<use name="DataFormats/Provenance"/>
 <use name="FWCore/MessageLogger"/>
 <use name="DQMOffline/RecoB"/>
 <use name="rootcore"/>
