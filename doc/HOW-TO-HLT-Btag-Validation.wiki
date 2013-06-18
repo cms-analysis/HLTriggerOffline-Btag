@@ -15,30 +15,11 @@ For Btag POG/ TSG
 This document is a brief introduction into the technical details of HLTriggerOffline/Btag. It covers a few topics related to 'how-to start', 'how-to run', 'how-to plot and test' etc
 
 
----++ Table of Contents
-
-   * [[#how-to-start][1   HOW-TO start]]   * [[#cvs-repository][1.1   CVS repository]]
-
-
-   * [[#getting-relval-samples][2   Getting Relval samples]]   * [[#producing-local-relval-samples][2.1   Producing local RelVal samples]]
-   * [[#getting-central-produced-relval-samples][2.2   Getting  central  produced RelVal samples]]
-
-
-   * [[#the-test-of-dqm-harvesting][3   The test of DQM harvesting]]   * [[#plotting-dqm-v0001-r00000001-cmssw-5-3-3-relval-trigval-root][3.1   Plotting *DQM_V0001_R00000001_CMSSW_5_3_3_Relval_TrigVal.root*]]
-
-
-   * [[#additional-how-tos][4   Additional *HOW-TOs*]]
-   * [[#what-next][5   What next?]]
-   * [[#references][6   References]]
-   * [[#rst][7   RsT]]   * [[#more-details][7.1   More details]]
-   * [[#how-to-obtain-from-rst-different-outputs][7.2   HOW to obtain from RST different  outputs]]
-
-
 
 That's only a short introduction. Please, look at the reffered twikis for more details
 
 
----+++    HOW-TO start
+---+++ HOW-TO start
 
 The package HLTriggerOffline/Btag is designed to do a validation in  offline DQM So far, there is only support of  RelVal MC.
 
@@ -55,7 +36,7 @@ test/
 </verbatim>
 
 
----++++    CVS repository
+---++++ CVS repository
 
 First, we have to get the code from CVS repo.
 
@@ -77,12 +58,13 @@ scram b -j4
 hash -r
 </verbatim>
 
-To test the code, we have to fix the files  *HLTriggerOffline/Common/python/HLTValidation_cff.py* and *HLTriggerOffline/Common/test/hltHarvesting_cff.py*
+To test the code, we have to fix the files  *HLTriggerOffline/Common/python/HLTValidation_cff.py*, *HLTriggerOffline/Common/test/hltHarvesting_cff.py* and   *HLTriggerOffline/Common/test/HLTValidationHarvest_cff.py*
 
 
 <verbatim>
 cp HLTriggerOffline/Btag/doc/HLTValidation_cff.py HLTriggerOffline/Common/python/
 cp HLTriggerOffline/Btag/doc/hltHarvesting_cfg.py HLTriggerOffline/Common/test
+cp HLTriggerOffline/Btag/doc/HLTValidationHarvest_cff.py HLTriggerOffline/Common/test
 
 scram b -j4
 </verbatim>
@@ -90,10 +72,10 @@ scram b -j4
 
 
 
----+++    Getting Relval samples
+---+++ Getting Relval samples
 
 
----++++    Producing local RelVal samples
+---++++ Producing local RelVal samples
 
 I've tested the code w/o the access to central produced relval mc files. I've produced 10 events of *TTbar* for testing purpose  at  *desy-cms013.desy.de*  Higgs group server @ DESY.
 
@@ -124,7 +106,7 @@ step2_bla_bla_VALIDATION.root
 
 
 
----++++    Getting  central  produced RelVal samples
+---++++ Getting  central  produced RelVal samples
 
 The central produced samples can usually be used only  at lxplus.cern.ch
 
@@ -166,7 +148,7 @@ Ok, if we've chose some root file *file.root*  provided by the previous command,
 
 
 
----+++    The test of DQM harvesting
+---+++ The test of DQM harvesting
 
 Ok. Before we'll continue, we have to be sure that we either `` step2_bla_bla_VALIDATION.root `` or `` file.root`` under hands. Harvesting in DQM is a production of a set of TH1 objects stored somehow in the files with names like
 
@@ -185,7 +167,7 @@ cmsRun ../../Common/test/hltHarvesting_cfg.py
 </verbatim>
 
 
----++++    Plotting *DQM_V_R_CMSSW____Relval_TrigValroot*
+---++++ Plotting *DQM_V_R_CMSSW____Relval_TrigValroot*
 
 If we've done all correctly, we can produce a few plots. Later, we'll start DQM GUI server for the operation.  But now, it has a sense, to produce plots manually with some script. I've prepared in  *scripts/* folder a few useful tools.
 
@@ -249,7 +231,51 @@ The output of *cuy.py* is a nice plot  `$ref{fig1}$`
 L3/Offline discriminator distribution for 10 events  `label{fig1}`
 
 
----+++    Additional *HOW-TOs*
+---+++ Harvesting  HLT Btagging  for CMSSW___
+
+The example of testing HLT Btagging at L25 and L3 is shown below. In order to start, first one needs to get list of input *RelVal* files to put into the *hltHarvesting_cfg.py*. Let's go to 1, take the name of */RelVal/TTbar* dataset and get a list of files.
+
+
+<verbatim>
+ _dataset="/RelVal/TTbar/CMSSW_5_2_7/..."
+ cd ../scripts
+ das_client.py --query="dataset dataset=$_dataset  | grep dataset.name "
+ --idx=0 --limit=100000  | ./JSON.sh -b  |  egrep '\["data.*"name.*"\]'
+ | awk '{print $2}' | tr -d "\"" > list && cat list | xargs -I {} echo "echo {};
+ echo; das_client.py --query=\" file dataset={} \" --idx=0 --limit=100000 |
+./JSON.sh -b  |  egrep '\[\"data.*\"name.*\"\]' | awk '{print \$2}'; echo ;echo  " | sh
+</verbatim>
+
+Then, the obtained list is being used directly in a local run   of *cmsRun*. Hovewer, it is now possible to start *CRAB* jobs  in *$CMSSW_BASE/src/HLTriggerOffline/Btag/test/* folder.
+
+After running the
+
+
+<verbatim>
+cmsRun ../../Comon/test/hltHarvesting_cfg.py
+</verbatim>
+
+in the *test* folder, the file *DQM_R00001_V00001_CMSSW_5_2_7__RelTrig.root* is produced. Then a template of the *xml* file for plotting can be created if one does the following
+
+
+<verbatim>
+$CMSSW_BASE/src/HLTriggerOffline/Btag/scripts/cuy.py -c  DQM_R0001_V00001_CMSSW_5_2_7__RelTrig.root > HTLBTagPlot_CMSSW_5_2_7_MC.xml
+</verbatim>
+
+The file mentioned abore requres additional efforts to clean unnecessery lines with references to *TH1* objects which originate from other parts of DQM like ECAL, HCAL etc. Finally, the plots are created
+
+
+<verbatim>
+$CMSSW_BASE/src/HLTriggerOffline/Btag/scripts/cuy.py -x  HTLBTagPlot_CMSSW_5_2_7_MC.xml  --verbose
+</verbatim>
+
+The full set of the validation plots is shown below  figure2
+
+figure2Performance plotsFrom top-left side to bottom-right sides: JetTag distribution; efficiency vs JetTag for b/c jets; efficiency vs pT; Mistag-rates vs efficiency(b) for L25/L3
+
+
+
+---+++ Additional *HOW-TOs*
 
    * HOW-TO get a list of *hltBtag* collections needed for feeding *HLTBtagPerformanceAnalyzer.cc*
 
@@ -298,13 +324,13 @@ cvs ci -m "Working version of HLTriggerOffline/Btag/"
 
 
 
----+++    What next?
+---+++ What next?
 
 We have to test the code with  DQM GUI  service. We can repeat all steps done by Dmitry (DESY summer student) sometimes ago 4.
 
 
 
----+++    References
+---+++ References
 
 The *online* list of RelVal datasets 1
 
@@ -328,12 +354,12 @@ Other useful twiki 5
 
 
 
----+++    RsT
+---+++ RsT
 
 The documentation was written in RsT markup.
 
 
----++++    More details
+---++++ More details
 
 you can find more details here 6 and here 7
 
@@ -343,7 +369,7 @@ you can find more details here 6 and here 7
 
 
 
----++++    HOW to obtain from RST different  outputs
+---++++ HOW to obtain from RST different  outputs
 
    * Obtain HTML
 

@@ -9,7 +9,7 @@ HLT/Btag Validation
 :Contact: <marfin@mail.desy.de> <marfin@cern.ch>  
 :Status:  work in progress
 :Organization: DESY
-:Version: v0.1
+:Version: v0.2
 :Copyright: This document has been placed in the public domain. You
             may do with it as you wish. You may copy, modify,
             redistribute, reattribute, sell, buy, rent, lease,
@@ -18,7 +18,7 @@ HLT/Btag Validation
             anything else to it that your or anyone else's heart
             desires.
 
-:date: 04/25/13
+:date: 05/18/13
 
 
 
@@ -108,13 +108,14 @@ Then we have to update the package(s) which are provides the configurations of t
      scram b -j4
      hash -r 
 
-To test the code, we have to fix the files  ``HLTriggerOffline/Common/python/HLTValidation_cff.py`` and 
-``HLTriggerOffline/Common/test/hltHarvesting_cff.py``
+To test the code, we have to fix the files  ``HLTriggerOffline/Common/python/HLTValidation_cff.py``\ ,
+``HLTriggerOffline/Common/test/hltHarvesting_cff.py`` and   ``HLTriggerOffline/Common/test/HLTValidationHarvest_cff.py``
 
 .. code:: bash
 
           cp HLTriggerOffline/Btag/doc/HLTValidation_cff.py HLTriggerOffline/Common/python/
           cp HLTriggerOffline/Btag/doc/hltHarvesting_cfg.py HLTriggerOffline/Common/test
+          cp HLTriggerOffline/Btag/doc/HLTValidationHarvest_cff.py HLTriggerOffline/Common/test
 
           scram b -j4
 
@@ -312,6 +313,85 @@ The output of ``cuy.py`` is a nice plot  `$\ref{fig1}$`
    :align: center
 
    L3/Offline discriminator distribution for 10 events  `\label{fig1}`
+   
+   
+Harvesting  HLT Btagging  for CMSSW_5_2_7
+================================================
+
+
+The example of testing HLT Btagging at L25 and L3 is shown below. In order to start,
+first one needs to get list of input ``RelVal`` files to put into the ``hltHarvesting_cfg.py``\ .
+Let's go to [#RelValStat]_\ , take the name of ``/RelVal/TTbar`` dataset and get a list of files.
+ 
+.. code:: bash
+
+
+         _dataset="/RelVal/TTbar/CMSSW_5_2_7/..."
+         cd ../scripts  
+         das_client.py --query="dataset dataset=$_dataset  | grep dataset.name "  
+         --idx=0 --limit=100000  | ./JSON.sh -b  |  egrep '\["data.*"name.*"\]' 
+         | awk '{print $2}' | tr -d "\"" > list && cat list | xargs -I {} echo "echo {}; 
+         echo; das_client.py --query=\" file dataset={} \" --idx=0 --limit=100000 |   
+        ./JSON.sh -b  |  egrep '\[\"data.*\"name.*\"\]' | awk '{print \$2}'; echo ;echo  " | sh
+
+
+
+
+Then, the obtained list is being used directly in a local run   of ``cmsRun``\ . Hovewer, it is now possible 
+to start ``CRAB`` jobs  in ``$CMSSW_BASE/src/HLTriggerOffline/Btag/test/`` folder.
+
+
+After running the :: 
+
+          cmsRun ../../Comon/test/hltHarvesting_cfg.py
+ 
+
+in the ``test`` folder, the file ``DQM_R00001_V00001_CMSSW_5_2_7__RelTrig.root`` is produced.
+Then a template of the ``xml`` file for plotting can be created if one does the following ::
+
+
+         $CMSSW_BASE/src/HLTriggerOffline/Btag/scripts/cuy.py -c  DQM_R0001_V00001_CMSSW_5_2_7__RelTrig.root > HTLBTagPlot_CMSSW_5_2_7_MC.xml
+
+      
+The file mentioned abore requres additional efforts to clean unnecessery lines with references to ``TH1`` objects
+which originate from other parts of DQM like ECAL, HCAL etc.
+Finally, the plots are created   ::
+
+
+          $CMSSW_BASE/src/HLTriggerOffline/Btag/scripts/cuy.py -x  HTLBTagPlot_CMSSW_5_2_7_MC.xml  --verbose
+
+
+The full set of the validation plots is shown below  [figure2]_
+
+
+.. [figure2]
+
+
+   .. image :: CMSSW_5_2_7_plot1.png
+      :width: 30%
+   .. image :: CMSSW_5_2_7_plot2.png
+      :width: 30%
+   .. image :: CMSSW_5_2_7_plot3.png
+      :width: 30%
+
+   .. image :: CMSSW_5_2_7_plot4.png
+      :width: 30%
+   .. image :: CMSSW_5_2_7_plot5.png
+      :width: 30%
+   .. image :: CMSSW_5_2_7_plot6.png
+      :width: 30%
+
+   .. figure :: CMSSW_5_2_7_plot7.png
+      :width: 30%
+      :align: left
+
+      Performance plots
+
+
+      From top-left side to bottom-right sides:
+      JetTag distribution; efficiency vs JetTag for b/c jets; efficiency vs pT;
+      Mistag-rates vs efficiency(b) for L25/L3
+      
 
 
 
