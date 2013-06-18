@@ -12,6 +12,15 @@ bTagValidation     = cms.EDAnalyzer("HLTBTagPerformanceAnalyzer",
    MinJetPT        = cms.double(20),
 #   IsData          = cms.bool(False),
    BTagAlgorithm   = cms.string('TC'),
+# MC stuff
+   mcFlavours = cms.PSet(
+      light = cms.vuint32(1, 2, 3, 21),   # udsg
+      c = cms.vuint32(4),
+      b = cms.vuint32(5),
+      g = cms.vuint32(21),
+      uds = cms.vuint32(1, 2, 3)
+    ),
+   mcPartons = cms.InputTag("hltJetsbyValAlgo")    # pick hltJetsbyValPhys or hltJetsbyValAlgo
 )
 
 
