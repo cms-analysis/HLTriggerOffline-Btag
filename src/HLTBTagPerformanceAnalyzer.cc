@@ -3,6 +3,34 @@
 #include "DQMServices/Core/interface/DQMStore.h"
 #include "FWCore/ServiceRegistry/interface/Service.h"
 
+/// for gen matching 
+/// _BEGIN_
+#include <Math/GenVector/VectorUtil.h>
+#include "SimDataFormats/JetMatching/interface/JetFlavour.h"
+#include "SimDataFormats/JetMatching/interface/JetFlavourMatching.h"
+
+#include <algorithm>
+
+// find the index of the object key of an association vector closest to a given jet, within a given distance
+template <typename T, typename V>
+//int closestJet(const reco::Jet & jet, const edm::AssociationVector<T, V> & association, double distance) {
+int closestJet(const RefToBase<reco::Jet>   jet, const edm::AssociationVector<T, V> & association, double distance) {
+  int closest = -1;
+  for (unsigned int i = 0; i < association.size(); ++i) {
+    double d = ROOT::Math::VectorUtil::DeltaR(jet->momentum(), association[i].first->momentum());
+    if (d < distance) {
+      distance = d;
+      closest  = i;
+    }
+  }
+  return closest;
+}
+
+
+/// 
+/// _END_
+
+
 //
 // constructors and destructor
 //
@@ -25,8 +53,19 @@ HLTBTagPerformanceAnalyzer::HLTBTagPerformanceAnalyzer(const edm::ParameterSet& 
    minJetPT_                       = iConfig.getParameter<double>   ("MinJetPT");
    btagAlgo_                       = iConfig.getParameter<std::string> ("BTagAlgorithm");
 
+
+  //gen level partons
+
+  edm::ParameterSet mc = iConfig.getParameter<edm::ParameterSet>("mcFlavours");
+m_mcPartons =  iConfig.getParameter<edm::InputTag>("mcPartons"); 
+  m_mcLabels = mc.getParameterNamesForType<std::vector<unsigned int> >();  
+    for (unsigned int i = 0; i < m_mcLabels.size(); ++i)
+    m_mcFlavours.push_back( mc.getParameter<std::vector<unsigned int> >(m_mcLabels[i]) );
+  
+  m_mcMatching = m_mcPartons.label() != "none" ;
+
    // various parameters
-//   isData_                         = iConfig.getParameter<bool>   ("IsData");
+  //   isData_                         = iConfig.getParameter<bool>   ("IsData");
    
    // DQMStore services   
    dqm = edm::Service<DQMStore>().operator->();
@@ -59,11 +98,12 @@ HLTBTagPerformanceAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSe
    if ( triggerResults.accept(hltPathIndex_) )
    {
    // ONLINE BTAGGING  
+
+      Handle<reco::TrackIPTagInfoCollection> l25IPTagInfoHandler;
       
       if ( l25IPTagInfoCollection_.label() != "" && l25IPTagInfoCollection_.label() != "NULL" )
       {
          // IPTagInfo L25
-         Handle<reco::TrackIPTagInfoCollection> l25IPTagInfoHandler;
          iEvent.getByLabel(l25IPTagInfoCollection_, l25IPTagInfoHandler);
          const reco::TrackIPTagInfoCollection & l25IPTagInfos = *(l25IPTagInfoHandler.product());
          // JetTag L25
@@ -79,22 +119,26 @@ HLTBTagPerformanceAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSe
             // jet
             RefToBase<reco::Jet> jet  = l25IPTag.jet();
             H1_["JetTag_L25"] -> Fill(l25JetTag[jet]);
-			std::cout<<"# "<<j<<" "<<l25JetTag[jet]<<std::endl;
+//			std::cout<<"# "<<j<<" "<<l25JetTag[jet]<<std::endl;
          }
       } else std::cout<<"trobles with  l25IPTagInfoCollection"<<std::endl;
 
-   
-      // IPTagInfo L3
       Handle<reco::TrackIPTagInfoCollection> l3IPTagInfoHandler;
+       reco::TrackIPTagInfoCollection l3IPTagInfos;
+      JetTagMap l3JetTag;
+    
+   if ( l3IPTagInfoCollection_.label() != "" && l3IPTagInfoCollection_.label() != "NULL" ) {   
+      // IPTagInfo L3
       iEvent.getByLabel(l3IPTagInfoCollection_, l3IPTagInfoHandler);
-      const reco::TrackIPTagInfoCollection & l3IPTagInfos = *(l3IPTagInfoHandler.product());
+//      const reco::TrackIPTagInfoCollection & l3IPTagInfos = *(l3IPTagInfoHandler.product());
+       l3IPTagInfos = *(l3IPTagInfoHandler.product());
    
       // JetTag L3
       Handle<reco::JetTagCollection> l3JetTagHandler;
       iEvent.getByLabel(l3JetTagCollection_, l3JetTagHandler);
       
       // Btag mapping
-      JetTagMap l3JetTag;
+//      JetTagMap l3JetTag;
       
       for ( reco::JetTagCollection::const_iterator iter = l3JetTagHandler->begin(); iter != l3JetTagHandler->end(); iter++ )
           l3JetTag.insert(JetTagMap::value_type(iter->first, iter->second));
@@ -107,15 +151,111 @@ HLTBTagPerformanceAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSe
          H1_["JetTag_L3"] -> Fill(l3JetTag[jet]);
          
       }
-      
+} ///if l3IPTagInfoCollection_
+
+ // GEN MATCHING  & FLAVOUR DEPENDENT PLOTS for L25 & L3
+  // match to MC parton flavour - accessed on demand
+          if (m_mcMatching) {
+
+
+	  edm::Handle<reco::JetFlavourMatchingCollection> h_mcPartons;
+   iEvent.getByLabel(m_mcPartons, h_mcPartons);
+
+
+    if ( l25IPTagInfoCollection_.label() != "" && l25IPTagInfoCollection_.label() != "NULL" )
+    if (l25IPTagInfoHandler.isValid())
+      {
+
+		
+         const reco::TrackIPTagInfoCollection & l25IPTagInfos = *(l25IPTagInfoHandler.product());
+         // JetTag L25
+         Handle<reco::JetTagCollection> l25JetTagHandler;
+         iEvent.getByLabel(l25JetTagCollection_, l25JetTagHandler);
+		for ( reco::JetTagCollection::const_iterator iter = l25JetTagHandler->begin(); iter != l25JetTagHandler->end(); iter++ )
+        {
+	     edm::RefToBase<reco::Jet> jetBase=     iter->first;
+    ///matching L25  to partons       
+          // match to MC parton
+          unsigned int flavour = 0;
+            int m = closestJet(jetBase, *h_mcPartons, m_mcRadius);
+            flavour = (m != -1) ? abs((*h_mcPartons)[m].second.getFlavour()) : 0;
+
+            for (unsigned int i = 0; i < m_mcLabels.size(); ++i) {
+				 TString flavour_str= m_mcLabels[i].c_str();
+                 
+				flavours_t flav_collection=  m_mcFlavours[i];
+                flavours_t::iterator it = std::find(flav_collection.begin(), flav_collection.end(), flavour);
+                if (it!= flav_collection.end()) 	{
+						TString label="JetTag_L25_";
+						 label+=flavour_str;
+					     H1_[label.Data()]->Fill( iter->second);                       
+						    label="JetTag_L25_";
+						    label+=flavour_str+TString("_disc_pT");
+						    H2_[label.Data()]->Fill(iter->second,jetBase->pt());
+					} /// if it
+                 
+			} ///mcLabels
+
+     }//for reco::JetTagCollection L25
+    
+	} ///l25IPTagInfoCollection
+
+
+     if ( l3IPTagInfoCollection_.label() != "" && l3IPTagInfoCollection_.label() != "NULL" ) 
+	if (l3IPTagInfoHandler.isValid())  
+    {
+		
+         const reco::TrackIPTagInfoCollection & l3IPTagInfos = *(l3IPTagInfoHandler.product());
+         // JetTag L3
+         Handle<reco::JetTagCollection> l3JetTagHandler;
+         iEvent.getByLabel(l3JetTagCollection_, l3JetTagHandler);
+		for ( reco::JetTagCollection::const_iterator iter = l3JetTagHandler->begin(); iter != l3JetTagHandler->end(); iter++ )
+        {
+	     edm::RefToBase<reco::Jet> jetBase=     iter->first;
+    ///matching L3  to partons       
+          // match to MC parton
+          unsigned int flavour = 0;
+            int m = closestJet(jetBase, *h_mcPartons, m_mcRadius);
+            flavour = (m != -1) ? abs((*h_mcPartons)[m].second.getFlavour()) : 0;
+
+            for (unsigned int i = 0; i < m_mcLabels.size(); ++i) {
+				 TString flavour_str= m_mcLabels[i].c_str();
+                 
+				flavours_t flav_collection=  m_mcFlavours[i];
+                flavours_t::iterator it = std::find(flav_collection.begin(), flav_collection.end(), flavour);
+                if (it!= flav_collection.end()) 	{
+						TString label="JetTag_L3_";
+						 label+=flavour_str;
+					     H1_[label.Data()]->Fill( iter->second);                       
+						    label="JetTag_L3_";
+						    label+=flavour_str+TString("_disc_pT");
+						    H2_[label.Data()]->Fill(iter->second,jetBase->pt());
+					} /// if it
+
+			} /// for m_mcLabels.size
+
+		} //for  l3JetTagHandler
+
+	} /// if l3IPTagInfoCollection_.label
+
+ 
+        } ///matching
+
+
+   
    // OFFLINE BTAGGING
-      // IPTagInfo
       Handle<reco::TrackIPTagInfoCollection> trackIPTagInfoHandler;
+      Handle<reco::JetTagCollection> offlineJetTagHandler;
+
+    if ( trackIPTagInfoCollection_.label() != "" && trackIPTagInfoCollection_.label() != "NULL" )
+    if ( offlineJetTagCollection_.label() != "" && offlineJetTagCollection_.label() != "NULL" )
+	{
+
+      // IPTagInfo
       iEvent.getByLabel(trackIPTagInfoCollection_, trackIPTagInfoHandler);
       const reco::TrackIPTagInfoCollection & trackIPTagInfos = *(trackIPTagInfoHandler.product());
    
       // JetTag Offline
-      Handle<reco::JetTagCollection> offlineJetTagHandler;
       iEvent.getByLabel(offlineJetTagCollection_, offlineJetTagHandler);
       
       // Btag mapping
@@ -149,13 +289,15 @@ HLTBTagPerformanceAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSe
                drMatch = dr;
                l3BtagMatch = l3JetTag[hltjet];
             }
-         }
+         } ///for L3IPTagInfos
+
          if ( drMatch < 0.5 and jet -> pt() > 10. )
          {
                H2_["JetTag_OffvsL3"]  -> Fill (offlineJetTag[jet],l3BtagMatch);
          }
          
-      }
+      } /// for trackIPTagInfos
+
    // Online primary vertex
       const reco::Vertex & hltVertex = (*(l3IPTagInfos.at(0).primaryVertex().product())).at(0);
       
@@ -175,7 +317,8 @@ HLTBTagPerformanceAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSe
       H2_["Vertex_OffvsHLT_y"] -> Fill(hltVertex.y(),offVertex.y());
       H2_["Vertex_OffvsHLT_z"] -> Fill(hltVertex.z(),offVertex.z());
                     
-   }
+	} /// if trackIPTagInfoCollection
+   } /// if trg accept
 }
 
 
@@ -188,9 +331,14 @@ HLTBTagPerformanceAnalyzer::beginJob()
 // ---------------------------------------------   
    // BTag Histograms
    // discriminant range default TC (track counting)
-   float btagL = -110.;
+
+//   float btagL = -110.;
+//   float btagU = 50.;
+//   int   btagBins = 320;
+
+   float btagL = -10.;
    float btagU = 50.;
-   int   btagBins = 320;
+   int   btagBins = 300;
    
    if ( btagAlgo_ == "CSV" )
    {
@@ -265,6 +413,50 @@ HLTBTagPerformanceAnalyzer::beginJob()
    H2_["Vertex_OffvsHLT_x"] -> setAxisTitle("Offline vtx x(cm)",2);
    H2_["Vertex_OffvsHLT_y"] -> setAxisTitle("Offline vtx y(cm)",2);
    H2_["Vertex_OffvsHLT_z"] -> setAxisTitle("Offline vtx z(cm)",2);
+
+
+/// mc related plots
+
+  for (unsigned int i = 0; i < m_mcLabels.size(); ++i)
+{
+
+/// 1D for L25 discriminator
+
+     TString label="JetTag_L25_";
+     TString flavour= m_mcLabels[i].c_str();
+     label+=flavour;
+	 H1_[label.Data()] = 		 dqm->book1D(label.Data(),   Form("%s_%s",flavour.Data(),l25JetTagCollection_.label().c_str()), btagBins, btagL, btagU );
+     H1_[label.Data()]->setAxisTitle("disc",1);
+
+/// 1D for L3 discriminator
+
+     label="JetTag_L3_";
+     label+=flavour;
+	 H1_[label.Data()] = 		 dqm->book1D(label.Data(),   Form("%s_%s",flavour.Data(),l3JetTagCollection_.label().c_str()), btagBins, btagL, btagU );
+     H1_[label.Data()]->setAxisTitle("disc",1);
+
+
+/// 2D for efficiency calculations
+ 
+///Pt turn-on
+    int nBinsPt=30;
+    double pTmin=0;
+    double pTMax=300;
+
+    label="JetTag_L25_";
+    label+=flavour+TString("_disc_pT");
+    H2_[label.Data()] =  dqm->book2D( label.Data(), label.Data(), btagBins, btagL, btagU, nBinsPt, pTmin, pTMax );
+    H2_[label.Data()]->setAxisTitle("pT",2);
+    H2_[label.Data()]->setAxisTitle("disc",1);
+
+    label="JetTag_L3_";
+    label+=flavour+TString("_disc_pT");
+    H2_[label.Data()] =  dqm->book2D( label.Data(), label.Data(), btagBins, btagL, btagU, nBinsPt, pTmin, pTMax );
+    H2_[label.Data()]->setAxisTitle("pT",2);
+    H2_[label.Data()]->setAxisTitle("disc",1);
+
+}
+
    
    triggerConfChanged_ = false;
    
