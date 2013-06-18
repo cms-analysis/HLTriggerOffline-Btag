@@ -23,11 +23,31 @@
  *  Top level steering routine for HLT b tag performance analysis.
  *
  */
+
+#include "TH1F.h"
+#include "TH2F.h"
+#include "TH3F.h"
+#include "TProfile.h"
+#include "RVersion.h"
+
+#if ROOT_VERSION_CODE >= ROOT_VERSION(5,27,0)
+#include "TEfficiency.h"
+#else
+#include "TGraphAsymmErrors.h"
+#endif
+
  
 using namespace edm;
+
+using namespace std;
+
+#if ROOT_VERSION_CODE >= ROOT_VERSION(5,27,0)
+class HLTBTagHarvestingAnalyzer : public edm::EDAnalyzer { 
+#else
+class HLTBTagHarvestingAnalyzer : public edm::EDAnalyzer , public TGraphAsymmErrors{
+#endif
  
 
-class HLTBTagHarvestingAnalyzer : public edm::EDAnalyzer {
    public:
       explicit HLTBTagHarvestingAnalyzer(const edm::ParameterSet&);
       ~HLTBTagHarvestingAnalyzer();
@@ -40,6 +60,9 @@ class HLTBTagHarvestingAnalyzer : public edm::EDAnalyzer {
       virtual void analyze(const edm::Event&, const edm::EventSetup&);
       virtual void endJob() ;
 
+     TProfile * calculateEfficiency1D( TH1* num, TH1* den, string name );
+     void GetNumDenumerators(string num,string den,TH1 * & ptrnum,TH1* & ptrden,int type);
+     void mistagrate( TProfile* num, TProfile* den, string effName );
       virtual void beginRun(edm::Run const&, edm::EventSetup const&);
       virtual void endRun(edm::Run const&, edm::EventSetup const&);
       virtual void beginLuminosityBlock(edm::LuminosityBlock const&, edm::EventSetup const&);
@@ -48,7 +71,17 @@ class HLTBTagHarvestingAnalyzer : public edm::EDAnalyzer {
       // ----------member data ---------------------------
       std::string hltPathName_;
 
+typedef unsigned int            flavour_t;
+typedef std::vector<flavour_t>  flavours_t;
+
+      std::vector<std::string>  m_mcLabels;         // MC truth match - labels
+      std::vector<flavours_t>   m_mcFlavours;       // MC truth match - flavours selection
+      bool                      m_mcMatching;       // MC truth matching anabled/disabled
+		double minTag;
+		double maxTag;
       DQMStore * dqm;
+      // Histogram handler
+      std::map<std::string, MonitorElement *> H1_;
 
 };
 

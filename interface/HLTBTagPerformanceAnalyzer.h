@@ -41,6 +41,7 @@
  *  Top level steering routine for HLT b tag performance analysis.
  *
  */
+
  
 using namespace reco;
 using namespace edm;
@@ -52,6 +53,7 @@ class HLTBTagPerformanceAnalyzer : public edm::EDAnalyzer {
       ~HLTBTagPerformanceAnalyzer();
 
       static void fillDescriptions(edm::ConfigurationDescriptions& descriptions);
+
 
 
    private:
@@ -87,12 +89,31 @@ class HLTBTagPerformanceAnalyzer : public edm::EDAnalyzer {
       InputTag trackIPTagInfoCollection_;
       InputTag offlineJetTagCollection_;
       
+// gen level tag-handlers
+
+typedef unsigned int            flavour_t;
+typedef std::vector<flavour_t>  flavours_t;
+
+	  InputTag             m_mcPartons;        // MC truth match - jet association to partons
+      std::vector<std::string>  m_mcLabels;         // MC truth match - labels
+      std::vector<flavours_t>   m_mcFlavours;       // MC truth match - flavours selection
+  double                    m_mcRadius;         // MC truth match - deltaR association radius
+  bool                      m_mcMatching;       // MC truth matching anabled/disabled
+
+
+
+
       double minJetPT_;
       unsigned int hltPathIndex_;
+
+// data not supported 
 //      bool isData_;
       std::string btagAlgo_;
 
       DQMStore * dqm;
+
+
+
 
       // Histogram handler
       std::map<std::string, MonitorElement *> H1_;
@@ -102,3 +123,4 @@ class HLTBTagPerformanceAnalyzer : public edm::EDAnalyzer {
 
 
 #endif
+
